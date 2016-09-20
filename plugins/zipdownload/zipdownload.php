@@ -133,7 +133,9 @@ class zipdownload extends rcube_plugin
         // open zip file
         $zip = new ZipArchive();
         $zip->open($tmpfname, ZIPARCHIVE::OVERWRITE);
-
+        
+	    // We keep track of the local names used so far to prevent duplicates.
+	    $arrLocalNames = array();
         foreach ($message->attachments as $part) {
             $pid      = $part->mime_id;
             $part     = $message->mime_parts[$pid];
@@ -149,6 +151,21 @@ class zipdownload extends rcube_plugin
             }
 
             $disp_name   = $this->_convert_filename($filename);
+            
+            if(!empty($disp_name)) 
+            {
+            // We have to make sure that there aren't two of the same local names.
+            // Otherwise, one file will override the other and we will be missing in our zip.
+            while($arrLocalNames[$disp_name] > 0) 
+            {
+             $arrPathInfo = pathinfo($disp_name);
+             $intNext = $arrLocalNames[$disp_name]++;
+             $disp_name = $arrPathInfo['filename'] . "_" . $intNext . "." . $arrPathInfo['extension'];
+            }
+            // Add to the count.
+            $arrLocalNames[$disp_name]++;                                        
+            }
+            
             $tmpfn       = tempnam($temp_dir, 'zipattach');
             $tmpfp       = fopen($tmpfn, 'w');
             $tempfiles[] = $tmpfn;
